@@ -1,6 +1,11 @@
 const server = require("http").createServer();
 
-const io = require("socket.io")(server);
+const io = require("socket.io")(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
 
 const PORT = 3000;
 
@@ -8,6 +13,30 @@ server.listen(PORT, () => {
   console.log(`Listening on port ${PORT}`);
 });
 
-io.on("connection", (server) => {
-  console.log("A user connected");
+let readyPlayerCount = 0;
+io.on("connection", (socket) => {
+  console.log("A user connected", socket.id);
+
+  socket.on("ready", () => {
+    console.log("Player is ready", socket.id);
+    readyPlayerCount++;
+
+    if (readyPlayerCount % 2 === 0) {
+      io.emit("startGame", socket.id);
+    }
+  });
+
+  socket.on("paddleMove", (paddleData) => {
+    socket.broadcast.emit("paddleMove", paddleData);
+  });
+
+  socket.on("ballMove", (ballData) => {
+    socket.broadcast.emit("ballMove", ballData);
+  });
+
+  socket.on("disconnect", (reason) => {
+    console.log(
+      `client with id ${socket.id} has been disconnected because of ${reason}`
+    );
+  });
 });
